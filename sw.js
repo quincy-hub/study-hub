@@ -1,6 +1,6 @@
-// Network-first with offline fallback: updates show up as soon as she is online,
+// Network-first with offline fallback: updates show up as soon as the phone is online,
 // and everything still works with no connection once it has loaded once.
-const CACHE = "study-v2";
+const CACHE = "study-v3";
 const ASSETS = ["./", "./index.html", "./decks.js", "./manifest.webmanifest",
                 "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 self.addEventListener("install", e => {
@@ -15,7 +15,7 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: "no-cache" })
       .then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return r; })
       .catch(() => caches.match(e.request).then(m => m || caches.match("./index.html")))
   );
