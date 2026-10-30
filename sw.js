@@ -1,6 +1,6 @@
 // Network-first with offline fallback: updates show up as soon as she is online,
 // and everything still works with no connection once it has loaded once.
-const CACHE = "study-v1";
+const CACHE = "study-v2";
 const ASSETS = ["./", "./index.html", "./decks.js", "./manifest.webmanifest",
                 "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 self.addEventListener("install", e => {

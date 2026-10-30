@@ -154,9 +154,9 @@ function deckMenu(d) {
     <div class="sub">${cards.length} cards · ${d.grading === "flip" ? "tap to flip" : "type your answer"}</div>
     <div class="label">Direction</div>
     <div class="seg" id="seg">
-      <button data-v="mix">Mixed</button>
       <button data-v="ab">${esc(A)} → ${esc(B)}</button>
       <button data-v="ba">${esc(B)} → ${esc(A)}</button>
+      <button data-v="mix">Mixed</button>
     </div>
     <div class="stack">
       <button class="btn primary" id="all">Start · all ${cards.length} cards</button>
