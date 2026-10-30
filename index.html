@@ -147,7 +147,7 @@ function deckMenu(d) {
   const cards = getCards(d);
   const weak = cards.filter(c => isWeak(d, c));
   const A = d.aLabel || "Front", B = d.bLabel || "Back";
-  if (!dirChoice || dirChoice.id !== d.id) dirChoice = { id: d.id, v: d.direction || "mix" };
+  if (!dirChoice || dirChoice.id !== d.id) dirChoice = { id: d.id, v: d.direction || "ab" };
   app.innerHTML = `
     <div class="topbar"><button class="back" id="back">‹ Decks</button></div>
     <h2>${esc(d.emoji || "")} ${esc(d.title)}</h2>
