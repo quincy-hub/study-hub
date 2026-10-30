@@ -232,28 +232,33 @@ function card() {
 
   ctl.innerHTML = `<form id="form" autocomplete="off">
     <input type="text" id="guess" placeholder="${cs ? "Capitalization counts" : "Your answer"}"
-      autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Your answer">
-    <button class="btn primary" style="width:100%" type="submit">Check</button></form>`;
-  const input = document.getElementById("guess");
+      autocapitalize="${cs ? "words" : "none"}" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Your answer">
+    <div id="fb"></div>
+    <button class="btn primary" id="go" style="width:100%" type="submit">Check</button></form>`;
+  const input = document.getElementById("guess"), form = document.getElementById("form"), go = document.getElementById("go");
   input.focus({ preventScroll: true });
-  let answered = false;
-  document.getElementById("form").onsubmit = e => {
+  let answered = false, ok = false;
+  // keep the keyboard up: tapping the button must not steal focus from the input
+  const keepFocus = e => e.preventDefault();
+  go.addEventListener("mousedown", keepFocus);
+  go.addEventListener("touchstart", keepFocus, { passive: false });
+  go.addEventListener("touchend", e => { e.preventDefault(); form.requestSubmit(); }, { passive: false });
+  input.addEventListener("beforeinput", e => { if (answered && e.inputType !== "insertLineBreak") e.preventDefault(); });
+  form.onsubmit = e => {
     e.preventDefault();
+    if (answered) return record(item, ok);
     const val = input.value.trim();
-    if (answered || !val) return;
+    if (!val) return;
     answered = true;
     const accepted = [ans, ...alts];
-    const ok = accepted.some(x => norm(x, cs) === norm(val, cs));
+    ok = accepted.some(x => norm(x, cs) === norm(val, cs));
     const caseOnly = !ok && cs && accepted.some(x => norm(x, false) === norm(val, false));
     cardEl.classList.add("flipped");
-    ctl.innerHTML = `
+    document.getElementById("fb").innerHTML = `
       <div class="feedback ${ok ? "ok" : "no"}">${ok ? "Correct!"
         : caseOnly ? `Right letters, wrong capitalization: it's “${esc(ans)}”.`
-        : `Not quite. You typed “${esc(val)}”.`}</div>
-      <button class="btn primary" style="width:100%" id="next">${S.i + 1 === S.items.length ? "Finish" : "Next"}</button>`;
-    const next = document.getElementById("next");
-    next.onclick = () => record(item, ok);
-    next.focus({ preventScroll: true });
+        : `Not quite. You typed “${esc(val)}”.`}</div>`;
+    go.textContent = S.i + 1 === S.items.length ? "Finish" : "Next";
   };
 }
 
