@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Study</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Study">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14171f" media="(prefers-color-scheme: dark)">
+<style>
+  :root {
+    --bg:#f6f3ec; --ink:#1d2433; --muted:#6b7280; --card:#fffdf8; --line:#ddd6c6;
+    --accent:#2b5fd9; --good:#1f8a4c; --bad:#c2412d; --good-bg:#e3f4ea; --bad-bg:#fbe7e3;
+    --back:#1d2433; --back-ink:#f6f3ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#14171f; --ink:#ece8dd; --muted:#98a0ae; --card:#1e232e; --line:#343b4a;
+      --accent:#7aa2ff; --good:#5cd08d; --bad:#ff8a73; --good-bg:#17382a; --bad-bg:#432019;
+      --back:#ece8dd; --back-ink:#14171f;
+    }
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { -webkit-text-size-adjust:100%; }
+  body {
+    margin:0; min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    display:flex; justify-content:center;
+    padding:max(20px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right))
+            max(40px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+  }
+  button { touch-action:manipulation; }
+  main { width:100%; max-width:520px; }
+  h1 { font-size:1.5rem; margin:0 0 2px; }
+  h2 { font-size:1.2rem; margin:0; }
+  .sub { color:var(--muted); font-size:.9rem; margin-bottom:18px; }
+  .topbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .back { border:0; background:transparent; color:var(--accent); font:inherit; font-size:1rem; padding:6px 4px; cursor:pointer; }
+
+  .tiles { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+  .tile {
+    text-align:left; padding:16px; border-radius:16px; border:1px solid var(--line); background:var(--card);
+    color:var(--ink); font:inherit; cursor:pointer; display:flex; flex-direction:column; gap:6px; min-height:120px;
+    box-shadow:0 4px 14px rgba(0,0,0,.05);
+  }
+  .tile .emoji { font-size:1.8rem; }
+  .tile small { color:var(--muted); }
+
+  .seg { display:flex; gap:6px; margin:6px 0 18px; }
+  .seg button { flex:1; padding:11px 6px; border:1px solid var(--line); background:transparent; color:var(--ink);
+    border-radius:10px; font:inherit; font-size:.88rem; cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:var(--ink); color:var(--bg); border-color:var(--ink); }
+  .label { font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+
+  .status { display:flex; justify-content:space-between; align-items:center; font-size:.85rem; color:var(--muted); margin-bottom:8px; }
+  .bar { height:5px; background:var(--line); border-radius:3px; overflow:hidden; margin-bottom:16px; }
+  .bar i { display:block; height:100%; background:var(--accent); transition:width .25s; }
+
+  .scene { perspective:1200px; }
+  .card { position:relative; height:260px; transform-style:preserve-3d; transition:transform .45s cubic-bezier(.3,.7,.3,1); outline:none; }
+  .card.tap { cursor:pointer; }
+  .card.flipped { transform:rotateY(180deg); }
+  .face {
+    position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:18px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:28px 18px 34px;
+    border:1px solid var(--line); background:var(--card); box-shadow:0 6px 24px rgba(0,0,0,.07); overflow:hidden;
+  }
+  .face.back { transform:rotateY(180deg); background:var(--back); color:var(--back-ink); border-color:var(--back); }
+  .tag { position:absolute; top:14px; left:18px; font-size:.72rem; text-transform:uppercase; letter-spacing:.1em; opacity:.55; }
+  .hint { position:absolute; bottom:12px; font-size:.78rem; opacity:.5; }
+  .txt { font-weight:600; letter-spacing:-.01em; line-height:1.15; overflow-wrap:anywhere; }
+  .txt.s1 { font-size:clamp(2.2rem,10vw,3.2rem); }
+  .txt.s2 { font-size:1.9rem; }
+  .txt.s3 { font-size:1.35rem; font-weight:500; line-height:1.3; }
+  .txt.sym { font-size:5.5rem; font-weight:700; }
+
+  .controls { margin-top:16px; min-height:96px; }
+  .row { display:flex; gap:10px; }
+  .btn { flex:1; padding:14px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--ink);
+    font:inherit; font-weight:600; cursor:pointer; }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .btn.good { background:var(--good-bg); color:var(--good); border-color:var(--good); }
+  .btn.bad { background:var(--bad-bg); color:var(--bad); border-color:var(--bad); }
+  .stack { display:flex; flex-direction:column; gap:10px; }
+  input[type=text] { width:100%; padding:14px; border-radius:12px; border:1px solid var(--line); background:var(--card);
+    color:var(--ink); font:inherit; font-size:1.1rem; margin-bottom:10px; }
+  input[type=text]:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .feedback { padding:12px 14px; border-radius:12px; font-weight:600; margin-bottom:10px; }
+  .feedback.ok { background:var(--good-bg); color:var(--good); }
+  .feedback.no { background:var(--bad-bg); color:var(--bad); }
+  .done { text-align:center; padding:20px 0; }
+  .score { font-size:3rem; font-weight:700; }
+  .missed { text-align:left; margin:16px 0; padding:12px 14px; border:1px solid var(--line); border-radius:12px; font-size:.92rem; background:var(--card); }
+  .missed b { display:block; margin-bottom:6px; }
+  .missed div { margin:3px 0; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+
+<script src="decks.js"></script>
+<script>
+const app = document.getElementById("app");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/* ---------- saved progress (stays on this device) ---------- */
+let db = { cards: {}, last: {} };
+try { db = Object.assign(db, JSON.parse(localStorage.getItem("study.v1") || "{}")); } catch (e) {}
+const save = () => { try { localStorage.setItem("study.v1", JSON.stringify(db)); } catch (e) {} };
+
+/* ---------- helpers ---------- */
+const getCards = d => d.cards.map(c => Array.isArray(c)
+  ? { a: c[0], b: c[1], altA: c[2] || [], altB: c[3] || [] }
+  : Object.assign({ altA: [], altB: [] }, c));
+const ckey = (d, c) => d.id + "::" + c.a;
+const isWeak = (d, c) => (db.cards[ckey(d, c)] || {}).l === 0;
+function norm(s, caseSensitive) {
+  s = String(s).trim();
+  if (caseSensitive) return s.replace(/\s+/g, " ");
+  return s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+}
+const sizeClass = t => t.length <= 12 ? "s1" : t.length <= 28 ? "s2" : "s3";
+
+/* ---------- home ---------- */
+function home() {
+  app.innerHTML = `
+    <h1>Study</h1><div class="sub">Pick a deck</div>
+    <div class="tiles">${DECKS.map((d, i) => {
+      const l = db.last[d.id];
+      return `<button class="tile" data-i="${i}">
+        <span class="emoji">${esc(d.emoji || "📚")}</span><b>${esc(d.title)}</b>
+        <small>${d.cards.length} cards${l ? ` · last ${l.score}/${l.total}` : ""}</small></button>`;
+    }).join("")}</div>`;
+  app.querySelectorAll(".tile").forEach(b => b.onclick = () => deckMenu(DECKS[b.dataset.i]));
+  window.scrollTo(0, 0);
+}
+
+/* ---------- deck menu ---------- */
+let dirChoice = null;
+function deckMenu(d) {
+  const cards = getCards(d);
+  const weak = cards.filter(c => isWeak(d, c));
+  const A = d.aLabel || "Front", B = d.bLabel || "Back";
+  if (!dirChoice || dirChoice.id !== d.id) dirChoice = { id: d.id, v: d.direction || "mix" };
+  app.innerHTML = `
+    <div class="topbar"><button class="back" id="back">‹ Decks</button></div>
+    <h2>${esc(d.emoji || "")} ${esc(d.title)}</h2>
+    <div class="sub">${cards.length} cards · ${d.grading === "flip" ? "tap to flip" : "type your answer"}</div>
+    <div class="label">Direction</div>
+    <div class="seg" id="seg">
+      <button data-v="mix">Mixed</button>
+      <button data-v="ab">${esc(A)} → ${esc(B)}</button>
+      <button data-v="ba">${esc(B)} → ${esc(A)}</button>
+    </div>
+    <div class="stack">
+      <button class="btn primary" id="all">Start · all ${cards.length} cards</button>
+      ${weak.length ? `<button class="btn" id="weak">Practice missed cards (${weak.length})</button>` : ""}
+    </div>`;
+  const paint = () => app.querySelectorAll("#seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === dirChoice.v));
+  paint();
+  app.querySelectorAll("#seg button").forEach(b => b.onclick = () => { dirChoice.v = b.dataset.v; paint(); });
+  document.getElementById("back").onclick = home;
+  document.getElementById("all").onclick = () => begin(d, cards, true);
+  const w = document.getElementById("weak");
+  if (w) w.onclick = () => begin(d, weak, false);
+}
+
+/* ---------- session ---------- */
+let S = null;
+function begin(d, cards, full) {
+  const dir = dirChoice.v;
+  S = { d, full, i: 0, res: [],
+        items: shuffle(cards).map(c => ({ c, dir: dir === "mix" ? (Math.random() < .5 ? "ab" : "ba") : dir })) };
+  card();
+}
+
+function record(item, ok) {
+  const k = ckey(S.d, item.c), s = db.cards[k] || { r: 0, w: 0 };
+  if (ok) s.r++; else s.w++;
+  s.l = ok ? 1 : 0;
+  db.cards[k] = s;
+  S.res.push({ item, ok });
+  S.i++;
+  save();
+  card();
+}
+
+function card() {
+  if (S.i >= S.items.length) return done();
+  const d = S.d, item = S.items[S.i], c = item.c, ab = item.dir === "ab";
+  const q = ab ? c.a : c.b, ans = ab ? c.b : c.a;
+  const qL = (ab ? d.aLabel : d.bLabel) || (ab ? "Front" : "Back");
+  const aL = (ab ? d.bLabel : d.aLabel) || (ab ? "Back" : "Front");
+  const cs = ab ? !!d.caseSensitiveB : !!d.caseSensitiveA;
+  const alts = ab ? c.altB : c.altA;
+  const flip = d.grading === "flip";
+  const qCls = (q.length <= 3 && !flip) ? "sym" : sizeClass(q);
+  const aCls = (ans.length <= 3 && !flip) ? "sym" : sizeClass(ans);
+  const correct = S.res.filter(r => r.ok).length;
+
+  app.innerHTML = `
+    <div class="status"><button class="back" id="exit">✕ Exit</button>
+      <span>${S.i + 1} of ${S.items.length} · ${correct} correct</span></div>
+    <div class="bar"><i style="width:${(S.i / S.items.length) * 100}%"></i></div>
+    <div class="scene"><div class="card ${flip ? "tap" : ""}" id="card" ${flip ? 'tabindex="0" role="button" aria-label="Flip card"' : ""}>
+      <div class="face"><div class="tag">${esc(qL)}</div><div class="txt ${qCls}">${esc(q)}</div>
+        <div class="hint">${flip ? "Tap to flip" : `Type the ${esc(aL.toLowerCase())}`}</div></div>
+      <div class="face back"><div class="tag">${esc(aL)}</div><div class="txt ${aCls}">${esc(ans)}</div></div>
+    </div></div>
+    <div class="controls" id="controls"></div>`;
+  document.getElementById("exit").onclick = () => deckMenu(d);
+  const cardEl = document.getElementById("card"), ctl = document.getElementById("controls");
+
+  if (flip) {
+    let flipped = false;
+    const doFlip = () => {
+      if (flipped) return; flipped = true; cardEl.classList.add("flipped");
+      ctl.innerHTML = `<div class="row"><button class="btn bad" id="miss">Missed it</button><button class="btn good" id="knew">Knew it</button></div>`;
+      document.getElementById("miss").onclick = () => record(item, false);
+      document.getElementById("knew").onclick = () => record(item, true);
+    };
+    cardEl.onclick = doFlip;
+    cardEl.onkeydown = e => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); doFlip(); } };
+    return;
+  }
+
+  ctl.innerHTML = `<form id="form" autocomplete="off">
+    <input type="text" id="guess" placeholder="${cs ? "Capitalization counts" : "Your answer"}"
+      autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Your answer">
+    <button class="btn primary" style="width:100%" type="submit">Check</button></form>`;
+  const input = document.getElementById("guess");
+  input.focus({ preventScroll: true });
+  let answered = false;
+  document.getElementById("form").onsubmit = e => {
+    e.preventDefault();
+    const val = input.value.trim();
+    if (answered || !val) return;
+    answered = true;
+    const accepted = [ans, ...alts];
+    const ok = accepted.some(x => norm(x, cs) === norm(val, cs));
+    const caseOnly = !ok && cs && accepted.some(x => norm(x, false) === norm(val, false));
+    cardEl.classList.add("flipped");
+    ctl.innerHTML = `
+      <div class="feedback ${ok ? "ok" : "no"}">${ok ? "Correct!"
+        : caseOnly ? `Right letters, wrong capitalization: it's “${esc(ans)}”.`
+        : `Not quite. You typed “${esc(val)}”.`}</div>
+      <button class="btn primary" style="width:100%" id="next">${S.i + 1 === S.items.length ? "Finish" : "Next"}</button>`;
+    const next = document.getElementById("next");
+    next.onclick = () => record(item, ok);
+    next.focus({ preventScroll: true });
+  };
+}
+
+function done() {
+  const d = S.d, total = S.res.length, correct = S.res.filter(r => r.ok).length;
+  if (S.full) { db.last[d.id] = { score: correct, total }; save(); }
+  const missed = [...new Map(S.res.filter(r => !r.ok).map(r => [r.item.c.a, r.item.c])).values()];
+  app.innerHTML = `
+    <div class="done"><div class="sub">Round complete</div><div class="score">${correct} / ${total}</div>
+    ${missed.length ? `<div class="missed"><b>Review these</b>${missed.map(c => `<div>${esc(c.a)} = ${esc(c.b)}</div>`).join("")}</div>` : `<p>Perfect round! 🎉</p>`}
+    <div class="stack">
+      ${missed.length ? `<button class="btn primary" id="retry">Retry missed (${missed.length})</button>` : ""}
+      <button class="btn ${missed.length ? "" : "primary"}" id="again">Start over</button>
+      <button class="btn" id="home">All decks</button>
+    </div></div>`;
+  const r = document.getElementById("retry");
+  if (r) r.onclick = () => begin(d, missed, false);
+  document.getElementById("again").onclick = () => begin(d, getCards(d), true);
+  document.getElementById("home").onclick = home;
+}
+
+home();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
