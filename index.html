@@ -93,6 +93,13 @@
   .feedback { padding:12px 14px; border-radius:12px; font-weight:600; margin-bottom:10px; }
   .feedback.ok { background:var(--good-bg); color:var(--good); }
   .feedback.no { background:var(--bad-bg); color:var(--bad); }
+  .qtext { font-size:1.25rem; font-weight:600; line-height:1.3; margin:6px 0 16px; overflow-wrap:anywhere; }
+  .choice { text-align:left; display:flex; gap:10px; align-items:flex-start; width:100%; padding:14px; border-radius:12px;
+    border:1px solid var(--line); background:var(--card); color:var(--ink); font:inherit; cursor:pointer; }
+  .choice b { opacity:.5; min-width:1.2em; }
+  .choice.good { background:var(--good-bg); color:var(--good); border-color:var(--good); }
+  .choice.bad { background:var(--bad-bg); color:var(--bad); border-color:var(--bad); }
+  .choice:disabled { cursor:default; }
   .done { text-align:center; padding:20px 0; }
   .score { font-size:3rem; font-weight:700; }
   .missed { text-align:left; margin:16px 0; padding:12px 14px; border:1px solid var(--line); border-radius:12px; font-size:.92rem; background:var(--card); }
@@ -118,6 +125,12 @@ const save = () => { try { localStorage.setItem("study.v1", JSON.stringify(db));
 const getCards = d => d.cards.map(c => Array.isArray(c)
   ? { a: c[0], b: c[1], altA: c[2] || [], altB: c[3] || [] }
   : Object.assign({ altA: [], altB: [] }, c));
+/* quiz question: ["question","correct",["wrong1","wrong2","wrong3"],"optional explanation"]
+   or { q, a, wrong:[...], why }  — see decks.js */
+const getQuiz = d => (d.quiz || []).map(x => Array.isArray(x)
+  ? { q: x[0], a: x[1], wrong: x[2] || [], why: x[3] || "" }
+  : Object.assign({ wrong: [], why: "" }, x))
+  .filter(x => x.q && x.a && x.wrong.length >= 3);
 const ckey = (d, c) => d.id + "::" + c.a;
 const isWeak = (d, c) => (db.cards[ckey(d, c)] || {}).l === 0;
 function norm(s, caseSensitive) {
@@ -148,6 +161,7 @@ function deckMenu(d) {
   const weak = cards.filter(c => isWeak(d, c));
   const A = d.aLabel || "Front", B = d.bLabel || "Back";
   if (!dirChoice || dirChoice.id !== d.id) dirChoice = { id: d.id, v: d.direction || "ab" };
+  const quiz = getQuiz(d), qn = Math.min(d.quizSize || 10, quiz.length);
   app.innerHTML = `
     <div class="topbar"><button class="back" id="back">‹ Decks</button></div>
     <h2>${esc(d.emoji || "")} ${esc(d.title)}</h2>
@@ -161,6 +175,7 @@ function deckMenu(d) {
     <div class="stack">
       <button class="btn primary" id="all">Start · all ${cards.length} cards</button>
       ${weak.length ? `<button class="btn" id="weak">Practice missed cards (${weak.length})</button>` : ""}
+      ${quiz.length ? `<button class="btn" id="quiz">Multiple-choice quiz · ${qn} of ${quiz.length} questions</button>` : ""}
     </div>`;
   const paint = () => app.querySelectorAll("#seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === dirChoice.v));
   paint();
@@ -169,6 +184,8 @@ function deckMenu(d) {
   document.getElementById("all").onclick = () => begin(d, cards, true);
   const w = document.getElementById("weak");
   if (w) w.onclick = () => begin(d, weak, false);
+  const qb = document.getElementById("quiz");
+  if (qb) qb.onclick = () => beginQuiz(d, quiz, qn);
 }
 
 /* ---------- session ---------- */
@@ -260,6 +277,58 @@ function card() {
         : `Not quite. You typed “${esc(val)}”.`}</div>`;
     go.textContent = S.i + 1 === S.items.length ? "Finish" : "Next";
   };
+}
+
+/* ---------- multiple-choice quiz ---------- */
+let Q = null;
+function beginQuiz(d, pool, n) {
+  // random sample of n questions; choices are reshuffled and trimmed to 1 correct + 3 wrong
+  Q = { d, n, i: 0, res: [], items: shuffle(pool).slice(0, n).map(x => ({
+    x, choices: shuffle([x.a, ...shuffle(x.wrong).slice(0, 3)]) })) };
+  quizQ();
+}
+function quizQ() {
+  if (Q.i >= Q.items.length) return quizDone();
+  const it = Q.items[Q.i], correct = Q.res.filter(r => r.ok).length;
+  app.innerHTML = `
+    <div class="status"><button class="back" id="exit">✕ Exit</button>
+      <span>${Q.i + 1} of ${Q.items.length} · ${correct} correct</span></div>
+    <div class="bar"><i style="width:${(Q.i / Q.items.length) * 100}%"></i></div>
+    <div class="qtext">${esc(it.x.q)}</div>
+    <div class="stack" id="choices">${it.choices.map((c, k) =>
+      `<button class="choice" data-k="${k}"><b>${"ABCD"[k]}</b><span>${esc(c)}</span></button>`).join("")}</div>
+    <div class="controls" id="controls"></div>`;
+  document.getElementById("exit").onclick = () => deckMenu(Q.d);
+  const btns = [...document.querySelectorAll(".choice")];
+  btns.forEach(b => b.onclick = () => {
+    const pick = it.choices[b.dataset.k], ok = pick === it.x.a;
+    btns.forEach(x => {
+      x.disabled = true;
+      if (it.choices[x.dataset.k] === it.x.a) x.classList.add("good");
+    });
+    if (!ok) b.classList.add("bad");
+    Q.res.push({ it, ok, pick });
+    const last = Q.i + 1 === Q.items.length;
+    document.getElementById("controls").innerHTML = `
+      <div class="feedback ${ok ? "ok" : "no"}">${ok ? "Correct!" : "Not quite."}${it.x.why ? ` ${esc(it.x.why)}` : ""}</div>
+      <button class="btn primary" id="next" style="width:100%">${last ? "Finish" : "Next"}</button>`;
+    document.getElementById("next").onclick = () => { Q.i++; quizQ(); };
+  });
+}
+function quizDone() {
+  const d = Q.d, total = Q.res.length, correct = Q.res.filter(r => r.ok).length;
+  db.last[d.id + "::quiz"] = { score: correct, total }; save();
+  const missed = Q.res.filter(r => !r.ok);
+  app.innerHTML = `
+    <div class="done"><div class="sub">Quiz complete</div><div class="score">${correct} / ${total}</div>
+    ${missed.length ? `<div class="missed"><b>Review these</b>${missed.map(r =>
+      `<div>${esc(r.it.x.q)}<br>→ ${esc(r.it.x.a)}</div>`).join("")}</div>` : `<p>Perfect quiz! 🎉</p>`}
+    <div class="stack">
+      <button class="btn primary" id="again">New quiz</button>
+      <button class="btn" id="menu">Back to deck</button>
+    </div></div>`;
+  document.getElementById("again").onclick = () => beginQuiz(d, getQuiz(d), Math.min(d.quizSize || 10, getQuiz(d).length));
+  document.getElementById("menu").onclick = () => deckMenu(d);
 }
 
 function done() {

@@ -1,6 +1,6 @@
 // Network-first with offline fallback: updates show up as soon as the phone is online,
 // and everything still works with no connection once it has loaded once.
-const CACHE = "study-v3";
+const CACHE = "study-v4";
 const ASSETS = ["./", "./index.html", "./decks.js", "./manifest.webmanifest",
                 "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 self.addEventListener("install", e => {
